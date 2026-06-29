@@ -1,27 +1,70 @@
-# Dependencies
-node_modules/
+# ── Environment & secrets ──────────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+mobile/.env
+
+# ── Python ─────────────────────────────────────────────────────────────────────
 __pycache__/
 *.py[cod]
+*$py.class
+*.so
+.Python
+*.egg
 *.egg-info/
+dist/
+build/
 .venv/
 venv/
 env/
+ENV/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+.coverage.*
+*.cover
 
-# Environment
-.env
-
-# Build / IDE
+# ── Node / Expo / React Native ─────────────────────────────────────────────────
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 .expo/
+.expo-shared/
 dist/
-build/
-*.log
+web-build/
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+
+# ── IDE & OS ───────────────────────────────────────────────────────────────────
 .DS_Store
+Thumbs.db
+Desktop.ini
 .idea/
 .vscode/
+*.swp
+*.swo
+*~
 
-# Generated
+# ── Logs ───────────────────────────────────────────────────────────────────────
+*.log
+logs/
+
+# ── Generated / runtime artifacts ──────────────────────────────────────────────
 backend/app/reports/*.pdf
+!backend/app/reports/.gitkeep
 ml/models/*.joblib
+!ml/models/.gitkeep
 
-# Database
+# ── Docker ─────────────────────────────────────────────────────────────────────
 pgdata/
+
+# ── Misc ───────────────────────────────────────────────────────────────────────
+*.bak
+*.tmp
