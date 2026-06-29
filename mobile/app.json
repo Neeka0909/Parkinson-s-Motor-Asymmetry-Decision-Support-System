@@ -6,18 +6,24 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "splash": {
-      "backgroundColor": "#1a5276"
-    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.pdmotor.dss"
     },
     "android": {
       "adaptiveIcon": {
+        "foregroundImage": "./assets/icon.png",
         "backgroundColor": "#1a5276"
       },
       "package": "com.pdmotor.dss"
-    }
+    },
+    "plugins": [
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#1a5276"
+        }
+      ]
+    ]
   }
 }
