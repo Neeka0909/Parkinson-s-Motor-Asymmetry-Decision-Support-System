@@ -7,7 +7,7 @@
 ## Architecture
 
 ```
-mobile/          React Native (Expo SDK 51) — gamified assessments, tap/keystroke logging
+mobile/          React Native (Expo SDK 56) — gamified assessments, tap/keystroke logging
 backend/         Python Flask — REST API, auth, scoring, PDF reports
 ml/              Scikit-learn — feature engineering, risk classification
 docs/            Feature matrix, schema, API contract, deployment guide
