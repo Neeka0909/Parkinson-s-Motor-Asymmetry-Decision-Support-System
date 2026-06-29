@@ -1,6 +1,6 @@
 # Deployment & Run Guide
 
-This guide covers how to run the Motor DSS stack locally, via Docker, and how to prepare for production deployment.
+Complete setup guide for **Motor DSS** — local development, Docker, mobile (Expo Go), ML training, and production notes.
 
 > **Disclaimer:** This system is a decision-support research tool. It does not diagnose Parkinson's Disease. All outputs must be reviewed by a qualified neurologist.
 
@@ -11,13 +11,14 @@ This guide covers how to run the Motor DSS stack locally, via Docker, and how to
 1. [Prerequisites](#prerequisites)
 2. [Project Structure](#project-structure)
 3. [Environment Variables](#environment-variables)
-4. [Option A — Local Development (Recommended for First Run)](#option-a--local-development-recommended-for-first-run)
-5. [Option B — Docker (Full Stack)](#option-b--docker-full-stack)
+4. [Option A — Local Development (Recommended)](#option-a--local-development-recommended)
+5. [Option B — Docker Full Stack](#option-b--docker-full-stack)
 6. [Mobile App (Expo)](#mobile-app-expo)
 7. [ML Model Training](#ml-model-training)
 8. [Verify the Stack](#verify-the-stack)
 9. [Production Deployment Notes](#production-deployment-notes)
 10. [Troubleshooting](#troubleshooting)
+11. [Quick Reference](#quick-reference)
 
 ---
 
@@ -25,44 +26,48 @@ This guide covers how to run the Motor DSS stack locally, via Docker, and how to
 
 | Tool | Version | Purpose |
 |------|---------|---------|
-| **Python** | 3.11+ (3.13 supported) | Backend API & ML training |
-| **Node.js** | 18+ | React Native / Expo mobile app |
-| **npm** | 9+ | Mobile package manager |
-| **Docker Desktop** | Latest | PostgreSQL & optional full-stack container run |
-| **Git** | Any recent version | Clone / version control |
+| **Docker Desktop** | Latest | Must be **running** before any `docker compose` command |
+| **Python** | 3.11+ (3.13 tested) | Backend API & ML training |
+| **Node.js** | 18+ | Expo / React Native mobile app |
+| **npm** | 9+ | Mobile dependencies |
 
-**Optional (mobile testing):**
+**For mobile testing (pick one):**
 
-- [Expo Go](https://expo.dev/go) app on a physical phone
-- Android Studio emulator or Xcode simulator
+| Method | Requirements |
+|--------|--------------|
+| **Physical phone (recommended)** | [Expo Go](https://expo.dev/go) app, phone + PC on same Wi‑Fi |
+| **Android emulator** | Android Studio, SDK, `ANDROID_HOME` env var |
+| **iOS simulator** | macOS + Xcode only |
 
-**Windows note:** Use PowerShell. Replace `cp` with `copy` if needed:
-
-```powershell
-copy .env.example .env
-```
+**Windows:** Use PowerShell. Use `copy` instead of `cp` for file copies.
 
 ---
 
 ## Project Structure
 
 ```
-project-root/
-├── backend/          Flask REST API
-├── mobile/           React Native (Expo) app
-├── ml/               Scikit-learn training & model files
-├── docs/             Architecture & API documentation
-├── docker-compose.yml
-└── .env.example
+<project-root>/
+├── .env                 Backend environment (copy from .env.example)
+├── docker-compose.yml   PostgreSQL + optional backend container
+├── backend/             Flask REST API
+│   ├── init_db.py       Create database tables
+│   └── run.py           Start dev server (0.0.0.0:5000)
+├── mobile/              Expo SDK 51 app ("Motor DSS")
+│   └── .env             Mobile API URL (copy from .env.example)
+├── ml/                  Scikit-learn training & model
+│   └── models/          risk_classifier.joblib (after train.py)
+└── docs/                Architecture & API documentation
 ```
 
-**Default ports:**
+### Ports
 
-| Service | Port |
-|---------|------|
-| Flask API | `5000` |
-| PostgreSQL | `15432` (Docker; avoids conflict with local PostgreSQL on 5432/5433) |
-| Expo dev server | `8081` (Metro) |
+| Service | Host port | Notes |
+|---------|-----------|-------|
+| Flask API | `5000` | Binds to `0.0.0.0` — reachable from phone via LAN IP |
+| PostgreSQL (Docker) | **`15432`** | Maps to container port `5432` |
+| Expo Metro | `8081` | Dev bundler |
+
+> **Why port 15432?** Many Windows machines already run local PostgreSQL on ports **5432** and **5433**. Using `15432` ensures Docker Postgres is reachable without conflict. Always use **`127.0.0.1:15432`** in `DATABASE_URL`, not `localhost`.
 
 ---
 
@@ -70,24 +75,22 @@ project-root/
 
 ### Root `.env` (backend)
 
-Copy from the project root:
-
 ```powershell
 copy .env.example .env
 ```
 
-| Variable | Example | Description |
-|----------|---------|-------------|
-| `DATABASE_URL` | `postgresql://pdapp:pdapp_secret@127.0.0.1:15432/pdapp_db` | PostgreSQL connection string |
-| `FLASK_APP` | `app` | Flask application entry |
-| `FLASK_ENV` | `development` | Set to `production` in prod |
-| `SECRET_KEY` | Random string | Flask session secret |
+| Variable | Value | Description |
+|----------|-------|-------------|
+| `DATABASE_URL` | `postgresql://pdapp:pdapp_secret@127.0.0.1:15432/pdapp_db` | Docker Postgres connection |
+| `FLASK_APP` | `app` | Flask entry point |
+| `FLASK_ENV` | `development` | Set `production` in prod |
+| `SECRET_KEY` | Random string | Flask secret |
 | `JWT_SECRET_KEY` | Random string | JWT signing key |
-| `ML_MODEL_PATH` | `../ml/models/risk_classifier.joblib` | Path to trained classifier |
+| `ML_MODEL_PATH` | `../ml/models/risk_classifier.joblib` | Trained classifier path |
+
+The backend loads `.env` from the project root automatically (see `backend/app/config.py`).
 
 ### Mobile `.env`
-
-Copy inside the `mobile/` folder:
 
 ```powershell
 cd mobile
@@ -96,44 +99,56 @@ copy .env.example .env
 
 | Variable | Example | Description |
 |----------|---------|-------------|
-| `EXPO_PUBLIC_API_URL` | `http://192.168.1.10:5000/api/v1` | Backend API base URL |
+| `EXPO_PUBLIC_API_URL` | `http://192.168.100.243:5000/api/v1` | Flask API base URL |
 
-**Important:** When testing on a **physical phone**, use your PC's LAN IP — not `localhost`. Example:
+**Critical for physical phones:**
 
-```
-EXPO_PUBLIC_API_URL=http://192.168.1.10:5000/api/v1
-```
+| Target | `EXPO_PUBLIC_API_URL` |
+|--------|------------------------|
+| Phone on same Wi‑Fi | `http://<YOUR_PC_IP>:5000/api/v1` |
+| Emulator on same PC | `http://localhost:5000/api/v1` or `http://10.0.2.2:5000/api/v1` (Android) |
+| Production | `https://your-domain.com/api/v1` |
 
-Find your IP on Windows:
+Find your PC IP:
 
 ```powershell
 ipconfig
 ```
 
-Look for `IPv4 Address` under your active network adapter.
+Use the **IPv4 Address** of your Wi‑Fi adapter (e.g. `192.168.100.243`).
+
+After editing `mobile/.env`, restart Expo with cache clear:
+
+```powershell
+npx expo start --lan -c
+```
 
 ---
 
-## Option A — Local Development (Recommended for First Run)
+## Option A — Local Development (Recommended)
 
-Run each service separately. Best for debugging backend and mobile together.
+### Step 1 — Start Docker Desktop
 
-### Step 1 — Start PostgreSQL
+Ensure Docker Desktop is running. Verify:
+
+```powershell
+docker info
+```
+
+If you see `Cannot connect to the Docker daemon` or `dockerDesktopLinuxEngine` pipe error, start Docker Desktop and wait until it shows **Running**.
+
+### Step 2 — Start PostgreSQL
 
 ```powershell
 cd <project-root>
+copy .env.example .env
 docker compose up -d db
-```
-
-Wait until the database is healthy:
-
-```powershell
 docker compose ps
 ```
 
-You should see the `db` service as `healthy`.
+Wait until the `db` service shows **healthy**.
 
-### Step 2 — Install & Run Backend
+### Step 3 — Install & initialize backend
 
 ```powershell
 cd <project-root>\backend
@@ -142,23 +157,23 @@ python init_db.py
 python run.py
 ```
 
-The API starts at **http://localhost:5000**.
+Expected output includes `Running on http://0.0.0.0:5000`.
 
-Health check:
+Health check (PowerShell):
 
 ```powershell
-curl http://localhost:5000/api/v1/health
+Invoke-RestMethod http://127.0.0.1:5000/api/v1/health
 ```
 
-Expected response:
+Expected:
 
 ```json
 {"status": "ok", "service": "motor-dss-backend"}
 ```
 
-### Step 3 — Train ML Model (First Time Only)
+### Step 4 — Train ML model (first time)
 
-Open a **new terminal**:
+New terminal:
 
 ```powershell
 cd <project-root>\ml
@@ -166,33 +181,33 @@ pip install -r requirements.txt
 python train.py
 ```
 
-Model is saved to `ml/models/risk_classifier.joblib`. Restart the backend if it was already running so it picks up the model file.
+Output: `Model saved to ...\ml\models\risk_classifier.joblib` (~89% accuracy on synthetic data).
 
-### Step 4 — Run Mobile App
+Restart the backend if it was already running.
 
-Open a **new terminal**:
+### Step 5 — Run mobile app
+
+New terminal:
 
 ```powershell
 cd <project-root>\mobile
+copy .env.example .env
+# Edit .env — set EXPO_PUBLIC_API_URL to your PC LAN IP
 npm install
-npx expo start
+npx expo start --lan -c
 ```
 
-Then:
-
-- Press **`a`** for Android emulator
-- Press **`i`** for iOS simulator (macOS only)
-- Scan the QR code with **Expo Go** on your phone
+- **Physical phone:** Scan QR code with Expo Go
+- **Android emulator:** Press `a` (requires Android Studio + SDK — see [Troubleshooting](#android-sdk--emulator-errors))
+- **Do not** open `http://127.0.0.1:8081` in a browser expecting the app UI — that URL serves the Expo manifest JSON
 
 ---
 
-## Option B — Docker (Full Stack)
+## Option B — Docker Full Stack
 
-Runs PostgreSQL and the Flask backend in containers.
+Runs PostgreSQL and Flask backend in containers.
 
-### Step 1 — Train the ML Model First
-
-The backend container mounts `ml/models/`. Train locally before starting Docker:
+### Step 1 — Train ML model locally first
 
 ```powershell
 cd <project-root>\ml
@@ -200,252 +215,211 @@ pip install -r requirements.txt
 python train.py
 ```
 
-### Step 2 — Start All Services
+The backend container mounts `./ml/models/` as read-only.
+
+### Step 2 — Start services
 
 ```powershell
 cd <project-root>
 docker compose up -d --build
 ```
 
-This starts:
+| Container | Host access | Internal |
+|-----------|-------------|----------|
+| `db` | `127.0.0.1:15432` | `5432` |
+| `backend` | `http://localhost:5000` | — |
 
-- **db** — PostgreSQL 16 on port `5432`
-- **backend** — Flask/Gunicorn on port `5000`
-
-### Step 3 — Initialize Database Tables
+### Step 3 — Initialize tables
 
 ```powershell
 docker compose exec backend python init_db.py
 ```
 
-### Step 4 — Check Logs
+### Step 4 — Logs & stop
 
 ```powershell
 docker compose logs -f backend
-```
-
-### Stop Services
-
-```powershell
-docker compose down
-```
-
-To remove database data as well:
-
-```powershell
-docker compose down -v
+docker compose down          # stop containers
+docker compose down -v       # stop + delete database volume
 ```
 
 ---
 
 ## Mobile App (Expo)
 
-### First Launch Flow
+**App name:** Motor DSS  
+**Bundle ID:** `com.pdmotor.dss`  
+**Expo SDK:** 51
 
-1. Open the app → **Register** a new account (age 50+).
-2. Read and acknowledge the **clinical disclaimer**.
-3. Play any of the three games:
-   - **Bubble Pop** — reaction time
-   - **Piano Tiles** — flight time
-   - **Typing Race** — hold time & hand dynamics
-4. View **Progress** → **Run Analysis** for risk profile.
-5. Generate a **PDF Report** for neurologist review.
+### First-time user flow
 
-### API URL by Environment
+1. **Register** — name, email, password, age (50+)
+2. Read the **clinical disclaimer**
+3. Play games: **Bubble Pop**, **Piano Tiles**, **Typing Race**
+4. **Progress** → **Run Analysis** → risk profile
+5. **Report** → generate PDF for neurologist
 
-| Where the app runs | `EXPO_PUBLIC_API_URL` |
-|--------------------|------------------------|
-| Same machine (web/emulator on PC) | `http://localhost:5000/api/v1` |
-| Physical phone on same Wi‑Fi | `http://<YOUR_PC_IP>:5000/api/v1` |
-| Production server | `https://your-domain.com/api/v1` |
+### Physical phone checklist
 
-After changing `.env`, restart Expo:
+- [ ] Backend running: `python run.py` in `backend/`
+- [ ] `mobile/.env` uses PC LAN IP, not `localhost`
+- [ ] Phone and PC on **same Wi‑Fi** (not mobile data)
+- [ ] Expo started with `npx expo start --lan -c`
+- [ ] Windows Firewall allows inbound TCP on port **5000** (see Troubleshooting)
+
+### Allow Flask through Windows Firewall (one-time, Admin PowerShell)
 
 ```powershell
-npx expo start -c
+New-NetFirewallRule -DisplayName "Motor DSS Flask" -Direction Inbound -Protocol TCP -LocalPort 5000 -Action Allow
 ```
-
-The `-c` flag clears the Metro cache.
 
 ---
 
 ## ML Model Training
 
-Training uses a **synthetic proxy dataset** for academic validation (not real patient data).
+Uses a **synthetic proxy dataset** for academic validation (not real patient data).
 
 ```powershell
 cd <project-root>\ml
 pip install -r requirements.txt
 python train.py
-```
-
-Output:
-
-- Model file: `ml/models/risk_classifier.joblib`
-- Console: classification report (precision/recall per risk tier)
-
-Test inference standalone:
-
-```powershell
 python inference.py
 ```
 
-Risk tiers: `baseline` → `monitor` → `elevated` → `referral`
+| Output | Location |
+|--------|----------|
+| Trained model | `ml/models/risk_classifier.joblib` |
+| Risk tiers | `baseline` → `monitor` → `elevated` → `referral` |
 
-If the model file is missing, the backend falls back to **rule-based scoring** automatically.
+If the model file is missing, the backend uses **rule-based scoring** automatically.
 
 ---
 
 ## Verify the Stack
 
-### 1. Health Check
+### 1. Health check
 
 ```powershell
-curl http://localhost:5000/api/v1/health
+Invoke-RestMethod http://127.0.0.1:5000/api/v1/health
 ```
 
-### 2. Register a Test User
+### 2. Register test user
 
 ```powershell
-curl -X POST http://localhost:5000/api/v1/auth/register `
-  -H "Content-Type: application/json" `
-  -d '{\"email\":\"test@example.com\",\"password\":\"test12345\",\"full_name\":\"Test User\",\"age\":68,\"handedness\":\"right\",\"language_pref\":\"mixed\"}'
+$body = @{
+  email = "test@example.com"
+  password = "test12345"
+  full_name = "Test User"
+  age = 68
+  handedness = "right"
+  language_pref = "mixed"
+} | ConvertTo-Json
+
+Invoke-RestMethod -Method POST -Uri "http://127.0.0.1:5000/api/v1/auth/register" `
+  -ContentType "application/json" -Body $body
 ```
 
 Save the `access_token` from the response.
 
-### 3. Submit a Game Session
+### 3. Submit a game session
+
+Replace `<TOKEN>` with your access token:
 
 ```powershell
-curl -X POST http://localhost:5000/api/v1/games/sessions `
-  -H "Content-Type: application/json" `
-  -H "Authorization: Bearer <YOUR_TOKEN>" `
-  -d '{\"game_type\":\"bubble_pop\",\"device_orientation\":\"portrait\",\"time_of_day\":\"morning\",\"score\":450,\"duration_ms\":30000,\"raw_events\":[{\"type\":\"tap\",\"x\":100,\"y\":400,\"hand_side\":\"left\",\"timestamp_ms\":1000,\"reaction_time_ms\":380,\"hit\":true}],\"started_at\":\"2026-06-27T08:00:00Z\",\"completed_at\":\"2026-06-27T08:00:30Z\"}'
+$session = @{
+  game_type = "bubble_pop"
+  device_orientation = "portrait"
+  time_of_day = "morning"
+  score = 450
+  duration_ms = 30000
+  raw_events = @(@{
+    type = "tap"; x = 100; y = 400; hand_side = "left"
+    timestamp_ms = 1000; reaction_time_ms = 380; hit = $true
+  })
+  started_at = "2026-06-27T08:00:00Z"
+  completed_at = "2026-06-27T08:00:30Z"
+} | ConvertTo-Json -Depth 5
+
+Invoke-RestMethod -Method POST -Uri "http://127.0.0.1:5000/api/v1/games/sessions" `
+  -ContentType "application/json" `
+  -Headers @{ Authorization = "Bearer <TOKEN>" } `
+  -Body $session
 ```
 
-### 4. Run Analysis
+### 4. Run analysis & generate PDF
 
 ```powershell
-curl -X POST http://localhost:5000/api/v1/predictions/analyze `
-  -H "Authorization: Bearer <YOUR_TOKEN>"
+Invoke-RestMethod -Method POST -Uri "http://127.0.0.1:5000/api/v1/predictions/analyze" `
+  -Headers @{ Authorization = "Bearer <TOKEN>" }
+
+Invoke-RestMethod -Method POST -Uri "http://127.0.0.1:5000/api/v1/reports/generate" `
+  -Headers @{ Authorization = "Bearer <TOKEN>" }
 ```
 
-### 5. Generate PDF Report
-
-```powershell
-curl -X POST http://localhost:5000/api/v1/reports/generate `
-  -H "Authorization: Bearer <YOUR_TOKEN>"
-```
-
-PDFs are written to `backend/app/reports/`.
+PDFs are saved to `backend/app/reports/`.
 
 ---
 
 ## Production Deployment Notes
 
-This project is configured for **research/demo** use. Before any real clinical deployment:
+Research/demo configuration only. Before clinical use:
 
-### Security Checklist
+### Security checklist
 
-- [ ] Change `SECRET_KEY` and `JWT_SECRET_KEY` to strong random values
-- [ ] Use HTTPS (TLS) via a reverse proxy (Nginx, Caddy, or cloud load balancer)
-- [ ] Never expose PostgreSQL port `5432` publicly
-- [ ] Use managed PostgreSQL (AWS RDS, Azure Database, Supabase, etc.)
-- [ ] Set `FLASK_ENV=production` and disable Flask debug mode
-- [ ] Add rate limiting and request validation at the proxy layer
+- [ ] Change `SECRET_KEY` and `JWT_SECRET_KEY`
+- [ ] HTTPS via reverse proxy (Nginx, Caddy, cloud LB)
+- [ ] Never expose PostgreSQL publicly
+- [ ] Use managed PostgreSQL (RDS, Supabase, Neon, Azure)
+- [ ] Set `FLASK_ENV=production`, disable Flask debug
+- [ ] Rate limiting at proxy layer
 
-### Suggested Production Architecture
+### Architecture
 
 ```
-Mobile App (Expo EAS build)
-        │
-        ▼ HTTPS
-  Reverse Proxy (Nginx / Caddy)
-        │
+Mobile (Expo EAS build)
+        │ HTTPS
         ▼
-  Gunicorn (backend container)
+  Reverse Proxy
+        ▼
+  Gunicorn (Flask)  :5000
         │
-        ├── PostgreSQL (managed)
-        └── ML model volume (risk_classifier.joblib)
+        ├── Managed PostgreSQL
+        └── ML model (risk_classifier.joblib)
 ```
 
-### Backend (Gunicorn)
-
-The Docker image already uses Gunicorn:
-
-```dockerfile
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--reload", "run:app"]
-```
-
-For production, remove `--reload` and add workers:
+Production Gunicorn (no `--reload`):
 
 ```bash
 gunicorn --bind 0.0.0.0:5000 --workers 4 run:app
 ```
 
-### Mobile (Expo EAS)
-
-Build standalone apps for distribution:
+Mobile builds:
 
 ```powershell
-cd mobile
 npm install -g eas-cli
+cd mobile
 eas build --platform android
-eas build --platform ios
 ```
 
-Set `EXPO_PUBLIC_API_URL` in EAS environment secrets to your production API URL.
-
-### Cloud Options
-
-| Component | Options |
-|-----------|---------|
-| Backend | Railway, Render, AWS ECS, Azure App Service, DigitalOcean App Platform |
-| Database | AWS RDS, Supabase, Neon, Azure PostgreSQL |
-| Mobile builds | Expo EAS |
-| File storage (PDFs) | S3, Azure Blob (replace local `backend/app/reports/`) |
+Set `EXPO_PUBLIC_API_URL` in EAS secrets to your production API URL.
 
 ---
 
 ## Troubleshooting
 
-### `ModuleNotFoundError: No module named 'flask'`
+### Docker: `dockerDesktopLinuxEngine` pipe not found
 
-Install backend dependencies:
+**Cause:** Docker Desktop is not running.
 
-```powershell
-cd backend
-pip install -r requirements.txt
-```
+**Fix:** Start Docker Desktop, wait until status is **Running**, then retry `docker compose up -d db`.
 
-### `scikit-learn` or `numpy` fails to install (Python 3.13)
+---
 
-Use the versions in the current `requirements.txt` (flexible `>=` pins with prebuilt wheels). Do not downgrade to pinned `1.5.0` / `1.26.4` on Python 3.13.
+### Database: `password authentication failed for user "pdapp"`
 
-### `psycopg2-binary` build error on Python 3.13
+**Cause:** Docker volume was initialized with old credentials, or connection hits local PostgreSQL instead of Docker.
 
-Ensure `psycopg2-binary>=2.9.10` is in `backend/requirements.txt`.
-
-### Mobile app cannot reach API
-
-1. Confirm backend is running: `curl http://localhost:5000/api/v1/health`
-2. Use your PC's LAN IP in `mobile/.env`, not `localhost`
-3. Allow port `5000` through Windows Firewall
-4. Phone and PC must be on the **same Wi‑Fi network**
-5. Restart Expo with cache clear: `npx expo start -c`
-
-### Database connection refused
-
-1. Check Docker is running: `docker compose ps`
-2. Start DB: `docker compose up -d db`
-3. Verify `DATABASE_URL` in `.env` matches Docker credentials
-4. Use port **15432** and host **127.0.0.1** in `.env` (Docker maps to host `15432`; local PostgreSQL often uses 5432/5433)
-
-### `password authentication failed for user "pdapp"`
-
-This usually happens after renaming database credentials. The Docker volume was first created with the **old** user and PostgreSQL does not re-create users when env vars change.
-
-**Fix — reset the Docker database volume (deletes local DB data):**
+**Fix A — Reset volume (deletes local DB data):**
 
 ```powershell
 cd <project-root>
@@ -455,30 +429,98 @@ cd backend
 python init_db.py
 ```
 
-**Alternative — keep existing data and add the new user manually:**
+**Fix B — Verify connection targets Docker:**
+
+Ensure `.env` contains:
+
+```
+DATABASE_URL=postgresql://pdapp:pdapp_secret@127.0.0.1:15432/pdapp_db
+```
+
+Test:
 
 ```powershell
-docker exec -it nipun-db-1 psql -U nipun -d nipun_db
+docker exec -it $(docker compose ps -q db) psql -U pdapp -d pdapp_db -c "SELECT 1"
 ```
 
-```sql
-CREATE USER pdapp WITH PASSWORD 'pdapp_secret';
-CREATE DATABASE pdapp_db OWNER pdapp;
-\q
+---
+
+### Mobile: `Network request failed` on register/login
+
+**Cause:** `mobile/.env` uses `localhost`, which on a phone refers to the phone itself.
+
+**Fix:**
+
+1. Run `ipconfig` → get Wi‑Fi IPv4 (e.g. `192.168.100.243`)
+2. Set `mobile/.env`:
+   ```
+   EXPO_PUBLIC_API_URL=http://192.168.100.243:5000/api/v1
+   ```
+3. Ensure backend is running (`python run.py`)
+4. Restart Expo: `npx expo start --lan -c`
+5. Add Windows Firewall rule for port 5000 (see [Mobile App section](#mobile-app-expo))
+
+---
+
+### Android SDK / emulator errors
+
+```
+Failed to resolve the Android SDK path
+'adb' is not recognized
 ```
 
-Then run `python init_db.py` again.
+**Cause:** Android Studio / SDK not installed.
 
-### ML predictions always use rule-based fallback
+**Fix:** Use **Expo Go on a physical phone** (no SDK needed), or install [Android Studio](https://developer.android.com/studio), then set:
 
-1. Train the model: `python ml/train.py`
-2. Confirm file exists: `ml/models/risk_classifier.joblib`
-3. Check `ML_MODEL_PATH` in `.env` points to that file
-4. Restart the backend
+```powershell
+[System.Environment]::SetEnvironmentVariable("ANDROID_HOME", "$env:LOCALAPPDATA\Android\Sdk", "User")
+```
+
+Add `%LOCALAPPDATA%\Android\Sdk\platform-tools` to PATH. Restart terminal.
+
+---
+
+### npm: `ECONNRESET` during `npm install`
+
+**Cause:** Unstable network during large package download.
+
+**Fix:**
+
+```powershell
+cd mobile
+Remove-Item -Recurse -Force node_modules -ErrorAction SilentlyContinue
+npm cache clean --force
+npm install --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000
+```
+
+Close other programs locking `node_modules` if you see `EPERM` errors.
+
+---
+
+### Python 3.13: package build failures
+
+Use flexible dependency pins already in `requirements.txt`:
+
+- `numpy>=2.1.0`, `pandas>=2.2.3`, `scikit-learn>=1.5.2`
+- `psycopg2-binary>=2.9.10`
+
+Do **not** pin older versions (`numpy==1.26.4`, `scikit-learn==1.5.0`) on Python 3.13.
+
+---
+
+### ML predictions use rule-based fallback only
+
+1. Run `python ml/train.py`
+2. Confirm `ml/models/risk_classifier.joblib` exists
+3. Check `ML_MODEL_PATH` in root `.env`
+4. Restart backend
+
+---
 
 ### `flask db upgrade` not found
 
-This project uses `init_db.py` instead of Alembic migrations for initial setup:
+This project uses `init_db.py` for table creation:
 
 ```powershell
 cd backend
@@ -487,9 +529,9 @@ python init_db.py
 
 ---
 
-## Quick Reference — Start Everything
+## Quick Reference
 
-**Terminal 1 — Database & Backend:**
+**Terminal 1 — Database & backend:**
 
 ```powershell
 cd <project-root>
@@ -503,7 +545,8 @@ python run.py
 
 ```powershell
 cd <project-root>\mobile
-npx expo start
+# Ensure .env has your PC LAN IP
+npx expo start --lan -c
 ```
 
 **One-time — ML model:**
@@ -520,4 +563,5 @@ python train.py
 - [API Contract](./api-contract.md)
 - [Database Schema](./database-schema.md)
 - [Feature Matrix](./feature-matrix.md)
+- [Literature Review](./literature-review.md)
 - [Phase 5 Testing Guide](./phase5-testing.md)
