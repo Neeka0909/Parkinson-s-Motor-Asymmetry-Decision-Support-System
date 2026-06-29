@@ -2,15 +2,15 @@ services:
   db:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: nipun
-      POSTGRES_PASSWORD: nipun_secret
-      POSTGRES_DB: nipun_db
+      POSTGRES_USER: pdapp
+      POSTGRES_PASSWORD: pdapp_secret
+      POSTGRES_DB: pdapp_db
     ports:
-      - "5432:5432"
+      - "15432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U nipun -d nipun_db"]
+      test: ["CMD-SHELL", "pg_isready -U pdapp -d pdapp_db"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -20,7 +20,7 @@ services:
     ports:
       - "5000:5000"
     environment:
-      DATABASE_URL: postgresql://nipun:nipun_secret@db:5432/nipun_db
+      DATABASE_URL: postgresql://pdapp:pdapp_secret@db:5432/pdapp_db
       FLASK_APP: app
       FLASK_ENV: development
       SECRET_KEY: dev-secret-key

@@ -1,8 +1,8 @@
 # Deployment & Run Guide
 
-This guide covers how to run the Nipun stack locally, via Docker, and how to prepare for production deployment.
+This guide covers how to run the Motor DSS stack locally, via Docker, and how to prepare for production deployment.
 
-> **Disclaimer:** Nipun is a decision-support research tool. It does not diagnose Parkinson's Disease. All outputs must be reviewed by a qualified neurologist.
+> **Disclaimer:** This system is a decision-support research tool. It does not diagnose Parkinson's Disease. All outputs must be reviewed by a qualified neurologist.
 
 ---
 
@@ -47,7 +47,7 @@ copy .env.example .env
 ## Project Structure
 
 ```
-Nipun/
+project-root/
 ├── backend/          Flask REST API
 ├── mobile/           React Native (Expo) app
 ├── ml/               Scikit-learn training & model files
@@ -61,7 +61,7 @@ Nipun/
 | Service | Port |
 |---------|------|
 | Flask API | `5000` |
-| PostgreSQL | `5432` |
+| PostgreSQL | `15432` (Docker; avoids conflict with local PostgreSQL on 5432/5433) |
 | Expo dev server | `8081` (Metro) |
 
 ---
@@ -78,7 +78,7 @@ copy .env.example .env
 
 | Variable | Example | Description |
 |----------|---------|-------------|
-| `DATABASE_URL` | `postgresql://nipun:nipun_secret@localhost:5432/nipun_db` | PostgreSQL connection string |
+| `DATABASE_URL` | `postgresql://pdapp:pdapp_secret@127.0.0.1:15432/pdapp_db` | PostgreSQL connection string |
 | `FLASK_APP` | `app` | Flask application entry |
 | `FLASK_ENV` | `development` | Set to `production` in prod |
 | `SECRET_KEY` | Random string | Flask session secret |
@@ -121,7 +121,7 @@ Run each service separately. Best for debugging backend and mobile together.
 ### Step 1 — Start PostgreSQL
 
 ```powershell
-cd d:\Project\Nipun
+cd <project-root>
 docker compose up -d db
 ```
 
@@ -136,7 +136,7 @@ You should see the `db` service as `healthy`.
 ### Step 2 — Install & Run Backend
 
 ```powershell
-cd d:\Project\Nipun\backend
+cd <project-root>\backend
 pip install -r requirements.txt
 python init_db.py
 python run.py
@@ -153,7 +153,7 @@ curl http://localhost:5000/api/v1/health
 Expected response:
 
 ```json
-{"status": "ok", "service": "nipun-backend"}
+{"status": "ok", "service": "motor-dss-backend"}
 ```
 
 ### Step 3 — Train ML Model (First Time Only)
@@ -161,7 +161,7 @@ Expected response:
 Open a **new terminal**:
 
 ```powershell
-cd d:\Project\Nipun\ml
+cd <project-root>\ml
 pip install -r requirements.txt
 python train.py
 ```
@@ -173,7 +173,7 @@ Model is saved to `ml/models/risk_classifier.joblib`. Restart the backend if it 
 Open a **new terminal**:
 
 ```powershell
-cd d:\Project\Nipun\mobile
+cd <project-root>\mobile
 npm install
 npx expo start
 ```
@@ -195,7 +195,7 @@ Runs PostgreSQL and the Flask backend in containers.
 The backend container mounts `ml/models/`. Train locally before starting Docker:
 
 ```powershell
-cd d:\Project\Nipun\ml
+cd <project-root>\ml
 pip install -r requirements.txt
 python train.py
 ```
@@ -203,7 +203,7 @@ python train.py
 ### Step 2 — Start All Services
 
 ```powershell
-cd d:\Project\Nipun
+cd <project-root>
 docker compose up -d --build
 ```
 
@@ -274,7 +274,7 @@ The `-c` flag clears the Metro cache.
 Training uses a **synthetic proxy dataset** for academic validation (not real patient data).
 
 ```powershell
-cd d:\Project\Nipun\ml
+cd <project-root>\ml
 pip install -r requirements.txt
 python train.py
 ```
@@ -309,7 +309,7 @@ curl http://localhost:5000/api/v1/health
 ```powershell
 curl -X POST http://localhost:5000/api/v1/auth/register `
   -H "Content-Type: application/json" `
-  -d '{\"email\":\"test@nipun.lk\",\"password\":\"test12345\",\"full_name\":\"Test User\",\"age\":68,\"handedness\":\"right\",\"language_pref\":\"mixed\"}'
+  -d '{\"email\":\"test@example.com\",\"password\":\"test12345\",\"full_name\":\"Test User\",\"age\":68,\"handedness\":\"right\",\"language_pref\":\"mixed\"}'
 ```
 
 Save the `access_token` from the response.
@@ -439,6 +439,35 @@ Ensure `psycopg2-binary>=2.9.10` is in `backend/requirements.txt`.
 1. Check Docker is running: `docker compose ps`
 2. Start DB: `docker compose up -d db`
 3. Verify `DATABASE_URL` in `.env` matches Docker credentials
+4. Use port **15432** and host **127.0.0.1** in `.env` (Docker maps to host `15432`; local PostgreSQL often uses 5432/5433)
+
+### `password authentication failed for user "pdapp"`
+
+This usually happens after renaming database credentials. The Docker volume was first created with the **old** user and PostgreSQL does not re-create users when env vars change.
+
+**Fix — reset the Docker database volume (deletes local DB data):**
+
+```powershell
+cd <project-root>
+docker compose down -v
+docker compose up -d db
+cd backend
+python init_db.py
+```
+
+**Alternative — keep existing data and add the new user manually:**
+
+```powershell
+docker exec -it nipun-db-1 psql -U nipun -d nipun_db
+```
+
+```sql
+CREATE USER pdapp WITH PASSWORD 'pdapp_secret';
+CREATE DATABASE pdapp_db OWNER pdapp;
+\q
+```
+
+Then run `python init_db.py` again.
 
 ### ML predictions always use rule-based fallback
 
@@ -463,7 +492,7 @@ python init_db.py
 **Terminal 1 — Database & Backend:**
 
 ```powershell
-cd d:\Project\Nipun
+cd <project-root>
 docker compose up -d db
 cd backend
 python init_db.py
@@ -473,14 +502,14 @@ python run.py
 **Terminal 2 — Mobile:**
 
 ```powershell
-cd d:\Project\Nipun\mobile
+cd <project-root>\mobile
 npx expo start
 ```
 
 **One-time — ML model:**
 
 ```powershell
-cd d:\Project\Nipun\ml
+cd <project-root>\ml
 python train.py
 ```
 

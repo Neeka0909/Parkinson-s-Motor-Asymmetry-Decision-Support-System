@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "Nipun",
-    "slug": "nipun-pd",
+    "name": "Motor DSS",
+    "slug": "pd-motor-dss",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -11,13 +11,13 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.nipun.pd"
+      "bundleIdentifier": "com.pdmotor.dss"
     },
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#1a5276"
       },
-      "package": "com.nipun.pd"
+      "package": "com.pdmotor.dss"
     }
   }
 }

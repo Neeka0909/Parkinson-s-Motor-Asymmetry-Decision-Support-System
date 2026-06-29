@@ -28,7 +28,7 @@ def generate_pdf_report(user, features, prediction, sessions_summary):
 
     story = []
 
-    story.append(Paragraph("Nipun — Motor Asymmetry Decision-Support Report", title_style))
+    story.append(Paragraph("Motor Asymmetry Decision-Support Report", title_style))
     story.append(Spacer(1, 0.3 * cm))
     story.append(
         Paragraph(
