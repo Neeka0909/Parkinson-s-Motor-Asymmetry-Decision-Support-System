@@ -1,7 +1,7 @@
 export type Language = 'en' | 'si' | 'mixed';
 
 const strings: Record<string, Record<Language, string>> = {
-  appName: { en: 'Nipun', si: 'නිපුන්', mixed: 'Nipun / නිපුන්' },
+  appName: { en: 'Motor DSS', si: 'Motor DSS', mixed: 'Motor DSS' },
   tagline: {
     en: 'Motor Health Assessment',
     si: 'Motor Health Assessment / ශරීර චලන ඇගයීම',

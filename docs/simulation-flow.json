@@ -8,7 +8,7 @@
         "method": "POST",
         "url": "{{baseUrl}}/auth/register",
         "body": {
-          "email": "sim@nipun.lk",
+          "email": "sim@example.com",
           "password": "sim12345",
           "full_name": "Simulation User",
           "age": 72,

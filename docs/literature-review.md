@@ -44,7 +44,7 @@ Parkinson's Disease characteristically presents with **unilateral motor symptom 
 7. Bot BM et al. (2014). The mPower study, Parkinson disease mobile data collected using ResearchKit. *Scientific Data*.
 8. Arora S et al. (2019). Detecting and monitoring the symptoms of Parkinson's disease using smartphones. *NPJ Digital Medicine*.
 
-## Gap Addressed by Nipun
+## Gap Addressed by This System
 
 Existing solutions focus on single-modality tests (finger tapping only) or lack:
 - Bilingual elderly UX for Sri Lankan context

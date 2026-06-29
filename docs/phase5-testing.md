@@ -52,7 +52,7 @@ cd backend && python init_db.py
 # 2. Register test user via API
 curl -X POST http://localhost:5000/api/v1/auth/register \
   -H "Content-Type: application/json" \
-  -d '{"email":"test@nipun.lk","password":"test123","full_name":"Test User","age":68}'
+  -d '{"email":"test@example.com","password":"test123","full_name":"Test User","age":68}'
 
 # 3. Submit game sessions (use mobile app or curl)
 # 4. Run analysis

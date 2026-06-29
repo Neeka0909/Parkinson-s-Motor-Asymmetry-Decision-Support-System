@@ -31,6 +31,6 @@ def create_app(config_class=Config):
 
     @app.route("/api/v1/health")
     def health():
-        return jsonify({"status": "ok", "service": "nipun-backend"})
+        return jsonify({"status": "ok", "service": "motor-dss-backend"})
 
     return app
