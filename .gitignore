@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# Environment
+.env
+
+# Build / IDE
+.expo/
+dist/
+build/
+*.log
+.DS_Store
+.idea/
+.vscode/
+
+# Generated
+backend/app/reports/*.pdf
+ml/models/*.joblib
+
+# Database
+pgdata/

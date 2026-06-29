@@ -1,0 +1,37 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: nipun
+      POSTGRES_PASSWORD: nipun_secret
+      POSTGRES_DB: nipun_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nipun -d nipun_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build: ./backend
+    ports:
+      - "5000:5000"
+    environment:
+      DATABASE_URL: postgresql://nipun:nipun_secret@db:5432/nipun_db
+      FLASK_APP: app
+      FLASK_ENV: development
+      SECRET_KEY: dev-secret-key
+      JWT_SECRET_KEY: dev-jwt-secret
+      ML_MODEL_PATH: /app/ml_models/risk_classifier.joblib
+    volumes:
+      - ./backend:/app
+      - ./ml/models:/app/ml_models
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:

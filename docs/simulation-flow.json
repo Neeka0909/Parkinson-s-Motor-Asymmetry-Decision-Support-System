@@ -1,0 +1,60 @@
+{
+  "name": "Longitudinal Simulation",
+  "description": "Submit synthetic game sessions to test longitudinal analysis",
+  "steps": [
+    {
+      "name": "Register user",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/auth/register",
+        "body": {
+          "email": "sim@nipun.lk",
+          "password": "sim12345",
+          "full_name": "Simulation User",
+          "age": 72,
+          "handedness": "right",
+          "language_pref": "mixed"
+        }
+      },
+      "extract": { "token": "$.access_token" }
+    },
+    {
+      "name": "Submit bubble pop session",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/games/sessions",
+        "headers": { "Authorization": "Bearer {{token}}" },
+        "body": {
+          "game_type": "bubble_pop",
+          "device_orientation": "portrait",
+          "time_of_day": "morning",
+          "score": 450,
+          "duration_ms": 30000,
+          "raw_events": [
+            {"type": "tap", "x": 100, "y": 400, "hand_side": "left", "timestamp_ms": 1000, "reaction_time_ms": 380, "hit": true},
+            {"type": "tap", "x": 300, "y": 400, "hand_side": "right", "timestamp_ms": 1500, "reaction_time_ms": 350, "hit": true}
+          ],
+          "started_at": "2026-06-27T08:00:00Z",
+          "completed_at": "2026-06-27T08:00:30Z"
+        }
+      }
+    },
+    {
+      "name": "Run analysis",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/predictions/analyze",
+        "headers": { "Authorization": "Bearer {{token}}" }
+      }
+    },
+    {
+      "name": "Generate report",
+      "request": {
+        "method": "POST",
+        "url": "{{baseUrl}}/reports/generate",
+        "headers": { "Authorization": "Bearer {{token}}" }
+      }
+    }
+  ],
+  "variables": { "baseUrl": "http://localhost:5000/api/v1" }
+}
