@@ -1,0 +1,23 @@
+{
+  "expo": {
+    "name": "Nipun",
+    "slug": "nipun-pd",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "backgroundColor": "#1a5276"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.nipun.pd"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#1a5276"
+      },
+      "package": "com.nipun.pd"
+    }
+  }
+}
