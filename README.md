@@ -18,6 +18,7 @@ docs/            Feature matrix, schema, API contract, deployment guide
 | Document | Description |
 |----------|-------------|
 | [Documentation Index](docs/README.md) | Full list of all docs |
+| [Technical System Documentation](docs/technical-system-documentation.md) | Complete A–Z technical reference (architecture, DB, ML, mobile, ops) |
 | [Deployment & Run Guide](docs/deployment-and-run.md) | Full setup: Docker, backend, ML, mobile, troubleshooting |
 | [API Contract](docs/api-contract.md) | REST endpoints |
 | [Database Schema](docs/database-schema.md) | PostgreSQL tables |

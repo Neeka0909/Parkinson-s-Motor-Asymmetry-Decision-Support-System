@@ -52,7 +52,7 @@ Complete setup guide for **Motor DSS** — local development, Docker, mobile (Ex
 ├── backend/             Flask REST API
 │   ├── init_db.py       Create database tables
 │   └── run.py           Start dev server (0.0.0.0:5000)
-├── mobile/              Expo SDK 51 app ("Motor DSS")
+├── mobile/              Expo SDK 56 app ("Motor DSS")
 │   └── .env             Mobile API URL (copy from .env.example)
 ├── ml/                  Scikit-learn training & model
 │   └── models/          risk_classifier.joblib (after train.py)
@@ -249,7 +249,7 @@ docker compose down -v       # stop + delete database volume
 
 **App name:** Motor DSS  
 **Bundle ID:** `com.pdmotor.dss`  
-**Expo SDK:** 51
+**Expo SDK:** 56
 
 ### First-time user flow
 
@@ -515,6 +515,28 @@ Do **not** pin older versions (`numpy==1.26.4`, `scikit-learn==1.5.0`) on Python
 2. Confirm `ml/models/risk_classifier.joblib` exists
 3. Check `ML_MODEL_PATH` in root `.env`
 4. Restart backend
+
+---
+
+### Metro: `Cannot read properties of undefined (reading 'transformFile')`
+
+**Cause:** `babel-preset-expo` is missing as a direct dependency (required for Expo SDK 56).
+
+**Fix:**
+
+```powershell
+cd mobile
+npx expo install babel-preset-expo
+npx expo start --lan -c
+```
+
+---
+
+### Expo Go: SDK version mismatch
+
+**Cause:** Expo Go app version does not match project SDK.
+
+**Fix:** This project uses **Expo SDK 56**. Ensure `mobile/package.json` has `"expo": "^56.0.0"` and run `npm install`. Restart with `npx expo start --lan -c`.
 
 ---
 

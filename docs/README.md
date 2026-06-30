@@ -2,6 +2,7 @@
 
 | Document | Purpose |
 |----------|---------|
+| [Technical System Documentation](./technical-system-documentation.md) | **Complete A–Z reference** — architecture, database, ML training/inference, mobile, setup, troubleshooting |
 | [Deployment & Run Guide](./deployment-and-run.md) | **Start here** — setup, ports, mobile, troubleshooting |
 | [API Contract](./api-contract.md) | REST endpoints (`/api/v1`) |
 | [Database Schema](./database-schema.md) | PostgreSQL tables & relationships |
@@ -18,7 +19,7 @@
 | Backend service | `motor-dss-backend` |
 | Flask API | `http://0.0.0.0:5000` |
 | Docker Postgres | `127.0.0.1:15432` → `pdapp` / `pdapp_db` |
-| Mobile (Expo SDK 51) | `com.pdmotor.dss` |
+| Mobile (Expo SDK 56) | `com.pdmotor.dss` |
 | ML model | `ml/models/risk_classifier.joblib` |
 | Mobile API env var | `EXPO_PUBLIC_API_URL` |
 
