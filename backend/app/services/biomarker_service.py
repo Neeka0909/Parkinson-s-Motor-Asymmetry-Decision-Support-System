@@ -3,7 +3,6 @@ from collections import defaultdict
 
 
 def extract_biomarkers(game_type, raw_events):
-    """Extract biomarker records from raw tap/keystroke events."""
     if not raw_events:
         return []
 

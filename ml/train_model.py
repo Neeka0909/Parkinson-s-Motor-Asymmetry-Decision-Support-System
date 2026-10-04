@@ -1,11 +1,4 @@
-"""
-Train, evaluate, cross-validate, and compare SVM, Random Forest, XGBoost, and KNN
-on the motor biomarker research dataset.
-
-Run:
-    python ml/train_model.py
-    python train_model.py
-"""
+"""Compare SVM, Random Forest, XGBoost, and KNN on the motor biomarker dataset."""
 
 from __future__ import annotations
 
@@ -96,7 +89,6 @@ class ModelResult:
 
 
 def resolve_class_names(y: pd.Series) -> list[str]:
-    """Extract labels dynamically, preserving preferred order when present."""
     present = {str(v) for v in y.dropna().unique()}
     ordered = [label for label in PREFERRED_LABEL_ORDER if label in present]
     remaining = sorted(present - set(ordered))
@@ -227,7 +219,6 @@ def build_estimators(n_classes: int) -> dict[str, Any]:
 
 
 def stratified_cv_scores(estimator: Any, X_train: pd.DataFrame, y_train: np.ndarray) -> np.ndarray:
-    """5-fold CV with scaler refit inside each fold (no leakage)."""
     pipe = Pipeline([("scaler", StandardScaler()), ("clf", deepcopy(estimator))])
     cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=RANDOM_STATE)
     return cross_val_score(pipe, X_train, y_train, cv=cv, scoring="accuracy", n_jobs=-1)
@@ -406,10 +397,6 @@ def save_best_bundle(
     scaler: StandardScaler,
     class_names: list[str],
 ) -> str:
-    """
-    Save a Pipeline(scaler, clf) as `model` so existing inference can call
-    predict_proba on raw feature vectors without a separate scaling step.
-    """
     os.makedirs(MODELS_DIR, exist_ok=True)
     model_path = os.path.join(MODELS_DIR, "risk_classifier.joblib")
 
