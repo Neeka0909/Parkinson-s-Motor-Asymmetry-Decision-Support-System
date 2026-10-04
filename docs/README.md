@@ -20,7 +20,9 @@
 | Flask API | `http://0.0.0.0:5000` |
 | Docker Postgres | `127.0.0.1:15432` → `pdapp` / `pdapp_db` |
 | Mobile (Expo SDK 56) | `com.pdmotor.dss` |
+| ML training | `python ml/train_model.py` (dataset: `Traning Data/motor_biomarker_dataset.csv`) |
 | ML model | `ml/models/risk_classifier.joblib` |
+| ML outputs | `ml/outputs/confusion_matrices.png` |
 | Mobile API env var | `EXPO_PUBLIC_API_URL` |
 
 See [Deployment & Run Guide](./deployment-and-run.md) for full setup instructions.
