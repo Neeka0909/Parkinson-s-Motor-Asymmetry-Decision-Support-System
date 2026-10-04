@@ -1,5 +1,3 @@
-"""Standalone inference script for testing."""
-
 import json
 import sys
 

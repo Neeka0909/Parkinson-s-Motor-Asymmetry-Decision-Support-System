@@ -253,7 +253,7 @@ Response 201: { report_id, download_url }
 ## 6. Complete Repository Structure
 
 ```
-Nipun/  (project root)
+MotorDSS/  (project root)
 │
 ├── .env.example                 Backend environment template
 ├── .env                         Backend secrets (not in git)
@@ -408,7 +408,7 @@ PostgreSQL runs as a **Docker container** defined in `docker-compose.yml`.
 | Setting | Value |
 |---------|-------|
 | Image | `postgres:16-alpine` |
-| Container name | Derived from project (`nipun-db-1` etc.) |
+| Container name | Derived from Compose project folder (e.g. `motordss-db-1`) |
 | Host port | **15432** → container **5432** |
 | Database | `pdapp_db` |
 | User | `pdapp` |

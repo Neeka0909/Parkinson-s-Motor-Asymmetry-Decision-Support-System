@@ -66,7 +66,6 @@ class MLInferenceEngine:
         }
 
     def _rule_based_fallback(self, features):
-        """Fallback when ML model file is not yet trained."""
         score = 0
         if abs(features["ft_asymmetry_trend"]) > 0.02:
             score += 1

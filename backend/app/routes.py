@@ -22,8 +22,6 @@ def _parse_dt(val):
     return val
 
 
-# ── Auth ──────────────────────────────────────────────────────────────────────
-
 @auth_bp.route("/register", methods=["POST"])
 def register():
     data = request.get_json()
@@ -60,8 +58,6 @@ def login():
     token = create_access_token(identity=user.id)
     return jsonify({"user": user.to_dict(), "access_token": token}), 200
 
-
-# ── Games ─────────────────────────────────────────────────────────────────────
 
 @games_bp.route("/sessions", methods=["POST"])
 @jwt_required()
@@ -159,8 +155,6 @@ def _calc_streak(logs):
     return streak
 
 
-# ── Predictions ───────────────────────────────────────────────────────────────
-
 @predictions_bp.route("/analyze", methods=["POST"])
 @jwt_required()
 def analyze():
@@ -192,8 +186,6 @@ def prediction_history():
     )
     return jsonify({"predictions": [p.to_dict() for p in preds]})
 
-
-# ── Reports ───────────────────────────────────────────────────────────────────
 
 @reports_bp.route("/generate", methods=["POST"])
 @jwt_required()
@@ -239,8 +231,6 @@ def download_report(report_id):
 
     return send_file(report.pdf_path, mimetype="application/pdf", as_attachment=True)
 
-
-# ── Exercises ─────────────────────────────────────────────────────────────────
 
 @exercises_bp.route("/recommended", methods=["GET"])
 @jwt_required()

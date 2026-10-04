@@ -1,7 +1,4 @@
-"""
-Train risk classifier on synthetic proxy dataset.
-Run: python train.py
-"""
+"""Legacy synthetic Random Forest trainer. Prefer train_model.py."""
 
 import os
 
@@ -33,7 +30,6 @@ RISK_LABELS = ["baseline", "monitor", "elevated", "referral"]
 
 
 def generate_synthetic_data(n_samples=2000, seed=42):
-    """Generate synthetic longitudinal motor profiles for model validation."""
     rng = np.random.default_rng(seed)
     rows = []
 
@@ -58,7 +54,7 @@ def generate_synthetic_data(n_samples=2000, seed=42):
             asym_trend = rng.normal(0.04, 0.015)
             sustained = rng.choice([0, 1], p=[0.3, 0.7])
             degradation = rng.normal(-2, 2)
-        else:  # referral
+        else:
             rt_mean = rng.normal(470, 50)
             rt_std = rng.normal(60, 15)
             asym_trend = rng.normal(0.06, 0.02)
