@@ -54,8 +54,11 @@ Complete setup guide for **Motor DSS** — local development, Docker, mobile (Ex
 │   └── run.py           Start dev server (0.0.0.0:5000)
 ├── mobile/              Expo SDK 56 app ("Motor DSS")
 │   └── .env             Mobile API URL (copy from .env.example)
-├── ml/                  Scikit-learn training & model
-│   └── models/          risk_classifier.joblib (after train.py)
+├── ml/                  Offline training & model artifacts
+│   ├── train_model.py   Compare SVM / RF / XGBoost / KNN → best .joblib
+│   ├── models/          risk_classifier.joblib (after train_model.py)
+│   └── outputs/         confusion_matrices.png
+├── Traning Data/        Research CSV used by train_model.py
 └── docs/                Architecture & API documentation
 ```
 
@@ -178,10 +181,15 @@ New terminal:
 ```powershell
 cd <project-root>\ml
 pip install -r requirements.txt
-python train.py
+python train_model.py
 ```
 
-Output: `Model saved to ...\ml\models\risk_classifier.joblib` (~89% accuracy on synthetic data).
+Uses `Traning Data/motor_biomarker_dataset.csv` (2,000 rows, 13 features + `risk_profile`).  
+Outputs:
+
+- CLI comparison table for SVM, Random Forest, XGBoost, KNN
+- Best model bundle: `ml/models/risk_classifier.joblib`
+- Confusion matrices: `ml/outputs/confusion_matrices.png`
 
 Restart the backend if it was already running.
 
@@ -212,10 +220,10 @@ Runs PostgreSQL and Flask backend in containers.
 ```powershell
 cd <project-root>\ml
 pip install -r requirements.txt
-python train.py
+python train_model.py
 ```
 
-The backend container mounts `./ml/models/` as read-only.
+The backend container mounts `./ml/models/` (see `ML_MODEL_PATH`).
 
 ### Step 2 — Start services
 
@@ -277,19 +285,32 @@ New-NetFirewallRule -DisplayName "Motor DSS Flask" -Direction Inbound -Protocol 
 
 ## ML Model Training
 
-Uses a **synthetic proxy dataset** for academic validation (not real patient data).
+Primary script: `ml/train_model.py`.  
+Dataset: `Traning Data/motor_biomarker_dataset.csv` (research proxy — not hospital EHR / PPMI clinical exports).
 
 ```powershell
 cd <project-root>\ml
 pip install -r requirements.txt
-python train.py
+python train_model.py
 python inference.py
+```
+
+Optional dataset override:
+
+```powershell
+python train_model.py --dataset "..\Traning Data\motor_biomarker_dataset.csv"
 ```
 
 | Output | Location |
 |--------|----------|
-| Trained model | `ml/models/risk_classifier.joblib` |
+| Best trained model | `ml/models/risk_classifier.joblib` |
+| Confusion matrices (2×2 grid) | `ml/outputs/confusion_matrices.png` |
+| Models compared | SVM, Random Forest, XGBoost, KNN |
+| Split | Stratified 70% train / 15% val / 15% test (`random_state=42`) |
+| Selection | Highest 5-fold CV mean (tie-break: test accuracy, macro F1) |
 | Risk tiers | `baseline` → `monitor` → `elevated` → `referral` |
+
+Legacy note: `ml/train.py` still generates an in-memory synthetic set and trains Random Forest only. Prefer `train_model.py` for the research CSV workflow.
 
 If the model file is missing, the backend uses **rule-based scoring** automatically.
 
@@ -511,7 +532,7 @@ Do **not** pin older versions (`numpy==1.26.4`, `scikit-learn==1.5.0`) on Python
 
 ### ML predictions use rule-based fallback only
 
-1. Run `python ml/train.py`
+1. Run `python ml/train_model.py`
 2. Confirm `ml/models/risk_classifier.joblib` exists
 3. Check `ML_MODEL_PATH` in root `.env`
 4. Restart backend
@@ -575,7 +596,7 @@ npx expo start --lan -c
 
 ```powershell
 cd <project-root>\ml
-python train.py
+python train_model.py
 ```
 
 ---

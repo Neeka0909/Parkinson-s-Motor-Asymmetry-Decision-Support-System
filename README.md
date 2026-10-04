@@ -66,10 +66,10 @@ PostgreSQL (Docker) is exposed on host port **15432** (not 5432 — avoids confl
 ```powershell
 cd ml
 pip install -r requirements.txt
-python train.py
+python train_model.py
 ```
 
-Model saved to `ml/models/risk_classifier.joblib`.
+Trains and compares SVM, Random Forest, XGBoost, and KNN on `Traning Data/motor_biomarker_dataset.csv`, then saves the best model to `ml/models/risk_classifier.joblib`. Confusion matrices are written to `ml/outputs/confusion_matrices.png`.
 
 ### 4. Mobile app
 

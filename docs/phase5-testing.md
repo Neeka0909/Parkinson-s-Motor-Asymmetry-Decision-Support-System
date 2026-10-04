@@ -128,5 +128,5 @@ PDF output: `backend/app/reports/`
 - [API contract](./api-contract.md)
 - [Literature review](./literature-review.md)
 - [Deployment guide](./deployment-and-run.md)
-- ML validation results (`python ml/train.py` classification report)
-- Limitations: synthetic data, no clinical validation, decision-support only
+- ML validation results (`python ml/train_model.py` comparison table, CV scores, confusion matrices)
+- Limitations: research proxy dataset (not hospital EHR / PPMI), no clinical validation, decision-support only
