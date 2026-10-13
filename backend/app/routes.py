@@ -18,13 +18,18 @@ exercises_bp = Blueprint("exercises", __name__)
 
 def _parse_dt(val):
     if isinstance(val, str):
-        return datetime.fromisoformat(val.replace("Z", "+00:00"))
+        dt = datetime.fromisoformat(val.replace("Z", "+00:00"))
+        if dt.tzinfo is not None:
+            dt = dt.astimezone(timezone.utc).replace(tzinfo=None)
+        return dt
+    if isinstance(val, datetime) and val.tzinfo is not None:
+        return val.astimezone(timezone.utc).replace(tzinfo=None)
     return val
 
 
 @auth_bp.route("/register", methods=["POST"])
 def register():
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     required = ["email", "password", "full_name", "age"]
     for field in required:
         if not data.get(field):
@@ -44,18 +49,18 @@ def register():
     db.session.add(user)
     db.session.commit()
 
-    token = create_access_token(identity=user.id)
+    token = create_access_token(identity=str(user.id))
     return jsonify({"user": user.to_dict(), "access_token": token}), 201
 
 
 @auth_bp.route("/login", methods=["POST"])
 def login():
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     user = User.query.filter_by(email=data.get("email", "")).first()
     if not user or not user.check_password(data.get("password", "")):
         return jsonify({"error": "unauthorized", "message": "Invalid credentials"}), 401
 
-    token = create_access_token(identity=user.id)
+    token = create_access_token(identity=str(user.id))
     return jsonify({"user": user.to_dict(), "access_token": token}), 200
 
 

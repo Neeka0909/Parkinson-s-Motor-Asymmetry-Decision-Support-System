@@ -51,7 +51,8 @@ Complete setup guide for **Motor DSS** — local development, Docker, mobile (Ex
 ├── .env                 Backend environment (copy from .env.example)
 ├── docker-compose.yml   PostgreSQL + optional backend container
 ├── backend/             Flask REST API
-│   ├── init_db.py       Create database tables
+│   ├── init_db.py       Create tables + seed demo data
+│   ├── seed_snapshot.json  Demo user/sessions/predictions for init_db.py
 │   └── run.py           Start dev server (0.0.0.0:5000)
 ├── mobile/              Expo SDK 56 app ("Motor DSS")
 │   └── .env             Mobile API URL (copy from .env.example)
@@ -317,7 +318,20 @@ Confirm:
 Invoke-RestMethod http://127.0.0.1:5000/api/v1/health
 ```
 
-`init_db.py` creates the tables. Without it, login returns HTTP 500 (`relation "users" does not exist`). Register in the app, or use a user you already created.
+`init_db.py` creates the tables and seeds the current demo dataset (`seed_snapshot.json`) when the DB is empty.
+
+Demo login after seed:
+
+- Email: `sim@example.com`
+- Password: `sim12345`
+
+Reload seed (wipes existing users/sessions/predictions/reports):
+
+```powershell
+python init_db.py --force-seed
+```
+
+Without `init_db.py`, login returns HTTP 500 (`relation "users" does not exist`).
 
 ### 5. Point the app at the PC
 
@@ -656,8 +670,50 @@ Do **not** pin older versions (`numpy==1.26.4`, `scikit-learn==1.5.0`) on Python
 
 1. Run `python ml/train_model.py`
 2. Confirm `ml/models/risk_classifier.joblib` exists
-3. Check `ML_MODEL_PATH` in root `.env`
+3. Check `ML_MODEL_PATH` in root `.env` (prefer `ml/models/risk_classifier.joblib`)
 4. Restart backend
+
+---
+
+### HTTP 500 on a new PC / fresh clone
+
+Most common cause: Postgres is up, but tables/seed were never created.
+
+On the new PC, run this exact order:
+
+```powershell
+cd <project-root>
+copy .env.example .env
+docker compose up -d db
+cd backend
+pip install -r requirements.txt
+python init_db.py
+python run.py
+```
+
+Then check:
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:5000/api/v1/health
+```
+
+Healthy response should include:
+
+- `status: ok`
+- `database.connected: true`
+- `database.tables_ready: true`
+- `database.user_count: 1` (after seed)
+
+Demo login after seed: `sim@example.com` / `sim12345`
+
+If health shows `tables_ready: false` or `user_count: 0`:
+
+```powershell
+cd backend
+python init_db.py --force-seed
+```
+
+If the app still shows HTTP 500, the API now returns a `message` field with the real error (for example missing table, date parse issue). Check that message or the backend terminal traceback.
 
 ---
 

@@ -263,7 +263,8 @@ MotorDSS/  (project root)
 │
 ├── backend/                     Flask REST API
 │   ├── Dockerfile               Python 3.11-slim + gunicorn
-│   ├── init_db.py               db.create_all() schema bootstrap
+│   ├── init_db.py               Create tables + seed demo dataset
+│   ├── seed_snapshot.json       Exported users/sessions/predictions for init_db.py
 │   ├── run.py                   Dev server entry (0.0.0.0:5000)
 │   ├── requirements.txt         Python dependencies
 │   └── app/
@@ -485,7 +486,17 @@ with app.app_context():
 
 Flask-Migrate is installed (`Migrate(app, db)`) for future schema evolution, but currently schema changes require model updates and re-initialization on fresh databases.
 
-**No seed data** — the database starts empty. Users and sessions come from mobile registration and gameplay.
+**Seed data:** `python init_db.py` creates tables and loads `backend/seed_snapshot.json` when the database is empty.
+
+| Seed item | Current snapshot |
+|-----------|------------------|
+| Demo user | `sim@example.com` / `sim12345` |
+| Game sessions | 46 (bubble_pop + piano_tiles) |
+| Biomarkers | 373 |
+| AI predictions | 4 |
+| Reports | 1 |
+
+Use `python init_db.py --force-seed` to wipe existing rows and reload the snapshot.
 
 ---
 
