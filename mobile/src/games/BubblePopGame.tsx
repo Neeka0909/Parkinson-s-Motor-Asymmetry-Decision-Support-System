@@ -25,16 +25,23 @@ export default function BubblePopGame({ onComplete }: Props) {
   const logger = useRef(new EventLogger());
   const startTime = useRef(highResTimestamp());
   const idCounter = useRef(0);
+  const scoreRef = useRef(0);
+  const finishedRef = useRef(false);
+  const onCompleteRef = useRef(onComplete);
+  const playHeight = useRef(H);
+  onCompleteRef.current = onComplete;
 
   const spawnBubble = useCallback(() => {
     const third = W / 3;
     const zones: Array<'left' | 'center' | 'right'> = ['left', 'center', 'right'];
     const zone = zones[Math.floor(Math.random() * 3)];
     const x = zone === 'left' ? third * 0.5 : zone === 'right' ? third * 2.5 : third * 1.5;
+    const topLimit = 140;
+    const bottomLimit = Math.max(topLimit + 40, playHeight.current - 100);
     const bubble: Bubble = {
       id: idCounter.current++,
-      x: x - 40,
-      y: Math.random() * (H * 0.5) + H * 0.15,
+      x: Math.min(Math.max(x - 40, 8), W - 88),
+      y: topLimit + Math.random() * (bottomLimit - topLimit),
       side: zone,
       spawnTime: highResTimestamp(),
     };
@@ -42,13 +49,18 @@ export default function BubblePopGame({ onComplete }: Props) {
   }, []);
 
   useEffect(() => {
+    const finish = () => {
+      if (finishedRef.current) return;
+      finishedRef.current = true;
+      onCompleteRef.current(scoreRef.current, logger.current.events, highResTimestamp() - startTime.current);
+    };
     const spawnInterval = setInterval(spawnBubble, 1200);
     const timer = setInterval(() => {
       setTimeLeft((t) => {
         if (t <= 1) {
           clearInterval(timer);
           clearInterval(spawnInterval);
-          onComplete(score, logger.current.events, highResTimestamp() - startTime.current);
+          setTimeout(finish, 0);
           return 0;
         }
         return t - 1;
@@ -59,18 +71,22 @@ export default function BubblePopGame({ onComplete }: Props) {
       clearInterval(spawnInterval);
       clearInterval(timer);
     };
-  }, [spawnBubble, onComplete, score]);
+  }, [spawnBubble]);
 
   const popBubble = (bubble: Bubble) => {
     const rt = highResTimestamp() - bubble.spawnTime;
     logger.current.logTap(bubble.x + 40, bubble.y + 40, rt, true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    setScore((s) => s + Math.max(1, Math.round(500 / rt)));
+    setScore((s) => {
+      const next = s + Math.max(1, Math.round(500 / rt));
+      scoreRef.current = next;
+      return next;
+    });
     setBubbles((prev) => prev.filter((b) => b.id !== bubble.id));
   };
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} onLayout={(e) => { playHeight.current = e.nativeEvent.layout.height; }}>
       <View style={styles.hud}>
         <Text style={styles.hudText}>Score: {score}</Text>
         <Text style={styles.hudText}>Time: {timeLeft}s</Text>
@@ -93,7 +109,7 @@ export default function BubblePopGame({ onComplete }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#1a1a2e' },
-  hud: { flexDirection: 'row', justifyContent: 'space-between', padding: 20, paddingTop: 50 },
+  hud: { flexDirection: 'row', justifyContent: 'flex-start', gap: 18, paddingHorizontal: 16, paddingTop: 52, paddingRight: 100 },
   hudText: { color: '#fff', fontSize: 22, fontWeight: '700' },
   zoneLabels: { flexDirection: 'row', justifyContent: 'space-around', paddingVertical: 8 },
   zoneText: { color: '#888', fontSize: 14, fontWeight: '600' },

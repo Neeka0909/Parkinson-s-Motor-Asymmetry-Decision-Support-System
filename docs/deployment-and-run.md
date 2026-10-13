@@ -14,11 +14,12 @@ Complete setup guide for **Motor DSS** — local development, Docker, mobile (Ex
 4. [Option A — Local Development (Recommended)](#option-a--local-development-recommended)
 5. [Option B — Docker Full Stack](#option-b--docker-full-stack)
 6. [Mobile App (Expo)](#mobile-app-expo)
-7. [ML Model Training](#ml-model-training)
-8. [Verify the Stack](#verify-the-stack)
-9. [Production Deployment Notes](#production-deployment-notes)
-10. [Troubleshooting](#troubleshooting)
-11. [Quick Reference](#quick-reference)
+7. [Android Emulator (Virtual Phone)](#android-emulator-virtual-phone)
+8. [ML Model Training](#ml-model-training)
+9. [Verify the Stack](#verify-the-stack)
+10. [Production Deployment Notes](#production-deployment-notes)
+11. [Troubleshooting](#troubleshooting)
+12. [Quick Reference](#quick-reference)
 
 ---
 
@@ -109,7 +110,7 @@ copy .env.example .env
 | Target | `EXPO_PUBLIC_API_URL` |
 |--------|------------------------|
 | Phone on same Wi‑Fi | `http://<YOUR_PC_IP>:5000/api/v1` |
-| Emulator on same PC | `http://localhost:5000/api/v1` or `http://10.0.2.2:5000/api/v1` (Android) |
+| Android emulator (virtual phone) | `http://10.0.2.2:5000/api/v1` |
 | Production | `https://your-domain.com/api/v1` |
 
 Find your PC IP:
@@ -206,7 +207,7 @@ npx expo start --lan -c
 ```
 
 - **Physical phone:** Scan QR code with Expo Go
-- **Android emulator:** Press `a` (requires Android Studio + SDK — see [Troubleshooting](#android-sdk--emulator-errors))
+- **Android emulator:** follow [Android Emulator (Virtual Phone)](#android-emulator-virtual-phone)
 - **Do not** open `http://127.0.0.1:8081` in a browser expecting the app UI — that URL serves the Expo manifest JSON
 
 ---
@@ -250,6 +251,126 @@ docker compose logs -f backend
 docker compose down          # stop containers
 docker compose down -v       # stop + delete database volume
 ```
+
+---
+
+## Android Emulator (Virtual Phone)
+
+Run Motor DSS inside an Android Studio virtual phone on this PC. The emulator is a separate device: `localhost` inside it is the phone, not Windows.
+
+### 1. Install Android Studio and the SDK
+
+1. Install [Android Studio](https://developer.android.com/studio).
+2. Open it and finish the setup wizard so it installs the **Android SDK** and **Android Emulator**.
+3. Default SDK folder on Windows:
+
+```text
+%LOCALAPPDATA%\Android\Sdk
+```
+
+That is usually `C:\Users\<you>\AppData\Local\Android\Sdk`.
+
+### 2. Point Windows at the SDK
+
+In PowerShell, run each line on its own. Do not join them with `&`.
+
+```powershell
+[System.Environment]::SetEnvironmentVariable("ANDROID_HOME", "$env:LOCALAPPDATA\Android\Sdk", "User")
+$sdk = "$env:LOCALAPPDATA\Android\Sdk"
+$userPath = [System.Environment]::GetEnvironmentVariable("Path", "User")
+[System.Environment]::SetEnvironmentVariable("Path", "$userPath;$sdk\platform-tools;$sdk\emulator", "User")
+```
+
+Close the terminal and open a new one. Check:
+
+```powershell
+adb version
+emulator -list-avds
+```
+
+### 3. Create the virtual phone (AVD)
+
+1. Android Studio → **More Actions** → **Virtual Device Manager** (or **Tools** → **Device Manager**).
+2. **Create Device**.
+3. Phone → **Pixel 6** → **Next**.
+4. System image: **API 35** or **API 34**, Google APIs, **x86_64**. Click **Download** if it is not installed yet.
+5. Name it `Pixel_6_API_35` → **Finish**.
+6. Press the **Play** button and wait until the Android home screen is visible.
+
+If the emulator will not start, turn on virtualization in BIOS (Intel VT-x or AMD SVM).
+
+### 4. Start the API the emulator can reach
+
+Docker Desktop must be running, then:
+
+```powershell
+cd <project-root>
+docker compose up -d db
+cd backend
+python init_db.py
+python run.py
+```
+
+Confirm:
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:5000/api/v1/health
+```
+
+`init_db.py` creates the tables. Without it, login returns HTTP 500 (`relation "users" does not exist`). Register in the app, or use a user you already created.
+
+### 5. Point the app at the PC
+
+In `mobile/.env`:
+
+```text
+EXPO_PUBLIC_API_URL=http://10.0.2.2:5000/api/v1
+```
+
+`10.0.2.2` is the Android emulator's alias for the PC. A Wi-Fi address such as `192.168.100.243` is for a physical phone. `localhost` inside the virtual phone is the phone itself.
+
+### 6. Open the app on the virtual phone
+
+With the emulator already running:
+
+```powershell
+cd <project-root>\mobile
+npm install
+$env:REACT_NATIVE_PACKAGER_HOSTNAME = "127.0.0.1"
+npx expo start --android -c
+```
+
+Expo Go is installed on the virtual phone the first time. The project uses **Expo SDK 56**.
+
+### 7. If Expo opens the wrong address
+
+Windows often has a WSL adapter (`172.19.x.x`). Expo may try that address and the virtual phone shows:
+
+```text
+Cannot connect to Expo CLI
+URL: 172.19.32.1:8081
+```
+
+Forward Metro and the API, then open Expo through `127.0.0.1`. Run these as separate PowerShell lines:
+
+```powershell
+$adb = "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe"
+& $adb devices
+& $adb reverse tcp:8081 tcp:8081
+& $adb reverse tcp:5000 tcp:5000
+& $adb shell am start -a android.intent.action.VIEW -d "exp://127.0.0.1:8081"
+```
+
+`adb devices` should list `emulator-5554`.
+
+### Virtual phone checklist
+
+- [ ] Android Studio SDK installed and `ANDROID_HOME` set
+- [ ] Pixel 6 AVD is running (home screen visible)
+- [ ] Docker Postgres is up and `python init_db.py` has been run once
+- [ ] Backend health check returns `ok`
+- [ ] `mobile/.env` uses `http://10.0.2.2:5000/api/v1`
+- [ ] Expo started with `npx expo start --android -c`
 
 ---
 
@@ -488,17 +609,18 @@ docker exec -it $(docker compose ps -q db) psql -U pdapp -d pdapp_db -c "SELECT 
 ```
 Failed to resolve the Android SDK path
 'adb' is not recognized
+Cannot connect to Expo CLI
+Failed to connect to / 192.168.x.x:5000
 ```
 
-**Cause:** Android Studio / SDK not installed.
+**Cause:** SDK is missing, the terminal was opened before `ANDROID_HOME` was set, or the virtual phone is using a PC Wi-Fi IP or the WSL address `172.19.x.x`.
 
-**Fix:** Use **Expo Go on a physical phone** (no SDK needed), or install [Android Studio](https://developer.android.com/studio), then set:
+**Fix:** Follow [Android Emulator (Virtual Phone)](#android-emulator-virtual-phone). In short:
 
-```powershell
-[System.Environment]::SetEnvironmentVariable("ANDROID_HOME", "$env:LOCALAPPDATA\Android\Sdk", "User")
-```
-
-Add `%LOCALAPPDATA%\Android\Sdk\platform-tools` to PATH. Restart terminal.
+1. Install Android Studio and create a Pixel 6 AVD.
+2. Set `ANDROID_HOME` and add `platform-tools` and `emulator` to PATH. Open a new terminal.
+3. Set `EXPO_PUBLIC_API_URL=http://10.0.2.2:5000/api/v1`.
+4. If Metro uses `172.19.x.x`, run `adb reverse` for ports `8081` and `5000`, then open `exp://127.0.0.1:8081`.
 
 ---
 

@@ -7,8 +7,17 @@ from sqlalchemy import desc
 from app.models import GameLog
 
 
+def _naive_utc(value):
+    if value is None:
+        return None
+    if getattr(value, "tzinfo", None) is not None:
+        return value.astimezone(timezone.utc).replace(tzinfo=None)
+    return value
+
+
 def build_feature_vector(user_id):
-    cutoff = datetime.now(timezone.utc) - timedelta(days=60)
+    now = _naive_utc(datetime.now(timezone.utc))
+    cutoff = now - timedelta(days=60)
     logs = (
         GameLog.query.filter(
             GameLog.user_id == user_id,
@@ -26,7 +35,7 @@ def build_feature_vector(user_id):
         for bm in log.biomarkers:
             rows.append(
                 {
-                    "started_at": log.started_at,
+                    "started_at": _naive_utc(log.started_at),
                     "game_type": log.game_type,
                     "reaction_time_ms": bm.reaction_time_ms,
                     "flight_time_ms": bm.flight_time_ms,
@@ -42,7 +51,6 @@ def build_feature_vector(user_id):
         return _empty_features()
 
     df = pd.DataFrame(rows)
-    now = datetime.now(timezone.utc)
     features = {}
 
     rt_7d = df[df["reaction_time_ms"].notna()]
@@ -82,7 +90,7 @@ def build_feature_vector(user_id):
         features["sustained_asymmetry_flag"] = 0
 
     scores_df = pd.DataFrame(
-        [{"started_at": log.started_at, "score": log.score} for log in logs if log.score]
+        [{"started_at": _naive_utc(log.started_at), "score": log.score} for log in logs if log.score]
     ).sort_values("started_at")
     if len(scores_df) >= 3:
         x = np.arange(len(scores_df))

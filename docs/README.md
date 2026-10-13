@@ -24,5 +24,7 @@
 | ML model | `ml/models/risk_classifier.joblib` |
 | ML outputs | `ml/outputs/confusion_matrices.png` |
 | Mobile API env var | `EXPO_PUBLIC_API_URL` |
+| Android emulator API | `http://10.0.2.2:5000/api/v1` |
+| Android virtual phone | Pixel 6 AVD — see [Deployment guide](./deployment-and-run.md#android-emulator-virtual-phone) |
 
 See [Deployment & Run Guide](./deployment-and-run.md) for full setup instructions.

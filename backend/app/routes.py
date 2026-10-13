@@ -218,7 +218,18 @@ def generate_report():
     db.session.add(report)
     db.session.commit()
 
-    return jsonify({"report_id": report.id, "download_url": f"/api/v1/reports/{report.id}/download"}), 201
+    return jsonify(
+        {
+            "report_id": report.id,
+            "download_url": f"/api/v1/reports/{report.id}/download",
+            "risk_profile": result["risk_profile"],
+            "confidence": result["confidence"],
+            "recommendation": result["recommendation"],
+            "feature_summary": result["feature_summary"],
+            "total_sessions": len(logs),
+            "period": period,
+        }
+    ), 201
 
 
 @reports_bp.route("/<report_id>/download", methods=["GET"])

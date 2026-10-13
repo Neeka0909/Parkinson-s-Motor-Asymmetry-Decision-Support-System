@@ -61,18 +61,35 @@ def generate_pdf_report(user, features, prediction, sessions_summary):
     story.append(Spacer(1, 0.5 * cm))
 
     story.append(Paragraph("Risk Assessment Summary", heading_style))
+    risk_colors = {
+        "baseline": colors.HexColor("#1e8449"),
+        "monitor": colors.HexColor("#b7950b"),
+        "elevated": colors.HexColor("#d68910"),
+        "referral": colors.HexColor("#c0392b"),
+    }
+    risk_name = str(prediction["risk_profile"]).lower()
+    wrap = ParagraphStyle("Wrap", parent=body_style, fontSize=10, leading=14)
     risk_data = [
-        ["Risk Profile", prediction["risk_profile"].upper()],
+        ["Risk Profile", Paragraph(risk_name.upper(), wrap)],
         ["Confidence", f"{prediction['confidence'] * 100:.1f}%"],
-        ["Recommendation", prediction["recommendation"]],
+        ["Recommendation", Paragraph(prediction["recommendation"], wrap)],
+        ["Sessions", str(sessions_summary.get("total_sessions", 0))],
+        ["Period", sessions_summary.get("period", "N/A")],
     ]
     t = Table(risk_data, colWidths=[5 * cm, 10 * cm])
     t.setStyle(
         TableStyle(
             [
                 ("BACKGROUND", (0, 0), (0, -1), colors.lightgrey),
+                ("BACKGROUND", (1, 0), (1, 0), risk_colors.get(risk_name, colors.lightgrey)),
+                ("TEXTCOLOR", (1, 0), (1, 0), colors.white),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
                 ("GRID", (0, 0), (-1, -1), 0.5, colors.grey),
                 ("FONTSIZE", (0, 0), (-1, -1), 10),
+                ("LEFTPADDING", (0, 0), (-1, -1), 6),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+                ("TOPPADDING", (0, 0), (-1, -1), 6),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
             ]
         )
     )

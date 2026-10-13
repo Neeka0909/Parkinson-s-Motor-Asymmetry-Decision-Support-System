@@ -92,8 +92,8 @@ export default function TypingRaceGame({ onComplete }: Props) {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#1a1a2e', paddingTop: 60, paddingHorizontal: 16 },
-  score: { color: '#fff', fontSize: 22, fontWeight: '700', marginBottom: 24 },
+  container: { flex: 1, backgroundColor: '#1a1a2e', paddingTop: 52, paddingHorizontal: 12 },
+  score: { color: '#fff', fontSize: 22, fontWeight: '700', marginBottom: 16, marginRight: 88 },
   label: { color: '#aaa', fontSize: 18 },
   target: { color: '#f1c40f', fontSize: 36, fontWeight: '800', marginVertical: 16, letterSpacing: 4 },
   typed: { color: '#fff', fontSize: 28, marginBottom: 32, minHeight: 40 },

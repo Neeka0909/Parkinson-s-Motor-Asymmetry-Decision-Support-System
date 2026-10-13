@@ -1415,8 +1415,10 @@ New-NetFirewallRule -DisplayName "Motor DSS Flask" -Direction Inbound -Protocol 
 | Target device | URL |
 |---------------|-----|
 | Physical phone (same Wi-Fi) | `http://<PC_IP>:5000/api/v1` |
-| Android emulator | `http://10.0.2.2:5000/api/v1` |
+| Android emulator (virtual phone) | `http://10.0.2.2:5000/api/v1` |
 | iOS simulator | `http://localhost:5000/api/v1` |
+
+`10.0.2.2` is the emulator's route to the Windows host. `localhost` inside the virtual phone is the phone, not the PC. If Expo advertises the WSL adapter (`172.19.x.x`), forward Metro with `adb reverse tcp:8081 tcp:8081` and open `exp://127.0.0.1:8081`. Full setup, SDK path, and Pixel 6 AVD steps: [Deployment & Run Guide — Android Emulator](./deployment-and-run.md#android-emulator-virtual-phone).
 
 ---
 

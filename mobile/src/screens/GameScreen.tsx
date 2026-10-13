@@ -47,7 +47,20 @@ export default function GameScreen({ gameType, onDone }: Props) {
     <View style={{ flex: 1 }}>
       <GameComponent onComplete={handleComplete} />
       {!submitting && (
-        <BigButton title="Exit" onPress={onDone} variant="danger" style={{ position: 'absolute', top: 50, right: 16, paddingVertical: 8, minHeight: 40 }} />
+        <BigButton
+          title="Exit"
+          onPress={onDone}
+          variant="danger"
+          style={{
+            position: 'absolute',
+            top: 48,
+            right: 12,
+            paddingVertical: 6,
+            paddingHorizontal: 14,
+            minHeight: 36,
+            marginVertical: 0,
+          }}
+        />
       )}
     </View>
   );

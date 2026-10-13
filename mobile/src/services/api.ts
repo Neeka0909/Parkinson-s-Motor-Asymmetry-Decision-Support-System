@@ -1,3 +1,5 @@
+import { File, Paths } from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
 import * as SecureStore from 'expo-secure-store';
 
 const API_BASE = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:5000/api/v1';
@@ -57,7 +59,32 @@ export const api = {
   },
 
   async generateReport() {
-    return request('/reports/generate', { method: 'POST' });
+    return request('/reports/generate', { method: 'POST' }) as Promise<{
+      report_id: string;
+      download_url: string;
+      risk_profile: string;
+      confidence: number;
+      recommendation: string;
+      feature_summary: Record<string, number>;
+      total_sessions: number;
+      period: string;
+    }>;
+  },
+
+  async downloadReport(reportId: string) {
+    const token = await getToken();
+    const destination = new File(Paths.cache, `motor-dss-${reportId}.pdf`);
+    const file = await File.downloadFileAsync(`${API_BASE}/reports/${reportId}/download`, destination, {
+      headers: { Authorization: token ? `Bearer ${token}` : '' },
+      idempotent: true,
+    });
+    const canShare = await Sharing.isAvailableAsync();
+    if (!canShare) throw new Error('Sharing is not available on this device');
+    await Sharing.shareAsync(file.uri, {
+      mimeType: 'application/pdf',
+      dialogTitle: 'Motor DSS report',
+      UTI: 'com.adobe.pdf',
+    });
   },
 
   async getExercises() {

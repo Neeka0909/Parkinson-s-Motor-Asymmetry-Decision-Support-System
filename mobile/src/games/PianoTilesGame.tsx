@@ -4,9 +4,10 @@ import * as Haptics from 'expo-haptics';
 import { EventLogger } from '../utils/eventLogger';
 import { highResTimestamp } from '../services/api';
 
-const { width: W } = Dimensions.get('window');
+const { width: W, height: H } = Dimensions.get('window');
 const LANES = [W * 0.2, W * 0.5, W * 0.8];
-const TILE_H = 60;
+const TILE_H = 70;
+const LANE_BAR = 110;
 
 type Tile = { id: number; lane: number; y: number; spawnTime: number };
 
@@ -21,18 +22,33 @@ export default function PianoTilesGame({ onComplete }: Props) {
   const logger = useRef(new EventLogger());
   const startTime = useRef(highResTimestamp());
   const idCounter = useRef(0);
+  const scoreRef = useRef(0);
+  const finishedRef = useRef(false);
+  const onCompleteRef = useRef(onComplete);
+  const fieldHeight = useRef(H);
+  onCompleteRef.current = onComplete;
+
+  const hitZone = () => Math.max(180, fieldHeight.current - LANE_BAR - TILE_H);
 
   useEffect(() => {
+    const finish = () => {
+      if (finishedRef.current) return;
+      finishedRef.current = true;
+      onCompleteRef.current(scoreRef.current, logger.current.events, highResTimestamp() - startTime.current);
+    };
+
     const spawn = setInterval(() => {
       const lane = Math.floor(Math.random() * 3);
+      const limit = fieldHeight.current - LANE_BAR;
       setTiles((prev) => [
-        ...prev.filter((t) => t.y < 800),
-        { id: idCounter.current++, lane, y: -TILE_H, spawnTime: highResTimestamp() },
+        ...prev.filter((t) => t.y < limit),
+        { id: idCounter.current++, lane, y: 90, spawnTime: highResTimestamp() },
       ]);
-    }, 800);
+    }, 900);
 
     const move = setInterval(() => {
-      setTiles((prev) => prev.map((t) => ({ ...t, y: t.y + 12 })).filter((t) => t.y < 900));
+      const limit = fieldHeight.current - LANE_BAR + 10;
+      setTiles((prev) => prev.map((t) => ({ ...t, y: t.y + 8 })).filter((t) => t.y < limit));
     }, 50);
 
     const timer = setInterval(() => {
@@ -41,7 +57,7 @@ export default function PianoTilesGame({ onComplete }: Props) {
           clearInterval(spawn);
           clearInterval(move);
           clearInterval(timer);
-          onComplete(score, logger.current.events, highResTimestamp() - startTime.current);
+          setTimeout(finish, 0);
           return 0;
         }
         return t - 1;
@@ -53,46 +69,54 @@ export default function PianoTilesGame({ onComplete }: Props) {
       clearInterval(move);
       clearInterval(timer);
     };
-  }, [onComplete, score]);
+  }, []);
+
+  const registerHit = (tile: Tile) => {
+    const side = tile.lane === 0 ? 'left' : tile.lane === 2 ? 'right' : 'center';
+    const ft = highResTimestamp() - tile.spawnTime;
+    logger.current.events.push({
+      type: 'tap',
+      x: LANES[tile.lane],
+      y: tile.y,
+      hand_side: side,
+      timestamp_ms: highResTimestamp(),
+      flight_time_ms: ft,
+      on_time: true,
+    });
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setScore((s) => {
+      const next = s + 10;
+      scoreRef.current = next;
+      return next;
+    });
+    setTiles((prev) => prev.filter((t) => t.id !== tile.id));
+  };
 
   const tapLane = (lane: number) => {
-    const hitZone = 700;
-    const tile = tiles.find((t) => t.lane === lane && Math.abs(t.y - hitZone) < 40);
-    const x = LANES[lane];
-    const side = lane === 0 ? 'left' : lane === 2 ? 'right' : 'center';
-
+    const zone = hitZone();
+    const tile = tiles.find((t) => t.lane === lane && t.y >= zone - 40 && t.y <= zone + TILE_H);
     if (tile) {
-      const ft = highResTimestamp() - tile.spawnTime;
-      logger.current.events.push({
-        type: 'tap',
-        x,
-        y: hitZone,
-        hand_side: side,
-        timestamp_ms: highResTimestamp(),
-        flight_time_ms: ft,
-        on_time: true,
-      });
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      setScore((s) => s + 10);
-      setTiles((prev) => prev.filter((t) => t.id !== tile.id));
-    } else {
-      logger.current.logTap(x, hitZone, undefined, false);
+      registerHit(tile);
+      return;
     }
+    logger.current.logTap(LANES[lane], zone, undefined, false);
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.hud}>
+    <View style={styles.container} onLayout={(e) => { fieldHeight.current = e.nativeEvent.layout.height; }}>
+      <View style={styles.hud} pointerEvents="box-none">
         <Text style={styles.hudText}>Score: {score}</Text>
         <Text style={styles.hudText}>Time: {timeLeft}s</Text>
       </View>
       {tiles.map((t) => (
-        <View
+        <Pressable
           key={t.id}
-          style={[styles.tile, { left: LANES[t.lane] - 40, top: t.y, backgroundColor: ['#3498db', '#fff', '#e74c3c'][t.lane] }]}
+          hitSlop={8}
+          onPress={() => registerHit(t)}
+          style={[styles.tile, { left: LANES[t.lane] - 45, top: t.y, backgroundColor: ['#3498db', '#f4f6f7', '#e74c3c'][t.lane], zIndex: 2 }]}
         />
       ))}
-      <View style={styles.hitLine} />
+      <View pointerEvents="none" style={[styles.hitLine, { top: hitZone() }]} />
       <View style={styles.lanes}>
         {[0, 1, 2].map((lane) => (
           <Pressable key={lane} style={styles.laneBtn} onPress={() => tapLane(lane)}>
@@ -106,10 +130,10 @@ export default function PianoTilesGame({ onComplete }: Props) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#0f0f23' },
-  hud: { flexDirection: 'row', justifyContent: 'space-between', padding: 20, paddingTop: 50 },
+  hud: { flexDirection: 'row', justifyContent: 'flex-start', gap: 18, paddingHorizontal: 16, paddingTop: 52, paddingRight: 100 },
   hudText: { color: '#fff', fontSize: 22, fontWeight: '700' },
-  tile: { position: 'absolute', width: 80, height: TILE_H, borderRadius: 8 },
-  hitLine: { position: 'absolute', top: 700, left: 0, right: 0, height: 3, backgroundColor: '#f1c40f' },
+  tile: { position: 'absolute', width: 90, height: TILE_H, borderRadius: 8 },
+  hitLine: { position: 'absolute', left: 0, right: 0, height: 3, backgroundColor: '#f1c40f' },
   lanes: { position: 'absolute', bottom: 0, left: 0, right: 0, flexDirection: 'row', height: 100 },
   laneBtn: { flex: 1, backgroundColor: 'rgba(255,255,255,0.1)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#333' },
   laneText: { color: '#fff', fontSize: 28, fontWeight: '800' },
